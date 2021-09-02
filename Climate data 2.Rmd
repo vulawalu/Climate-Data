@@ -109,11 +109,13 @@ rfPlt_wet ##Rainfall
 #May-October
   monthlyrain<-fijiRF%>%
   group_by(month,site)%>% #group by year and site and calculate average annual rainfall or mean across years by site
-  summarise(aveAnnRF=mean(rainfall_mm,na.rm=T))
+  summarise(aveAnnRF=mean(rainfall_mm,na.rm=T))%>%
+  mutate(month=factor(month,levels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Sug","Sep","Oct","Nov","Dec"))) ## Manually set order of months
 
 monthlyrain%>%
   filter(month %in% c("May", "Jun","Jul", "Aug", "Sep", "Oct"))
-  dry<-ggplot(monthlyrain,aes(x=month,y=aveAnnRF,group=site))+
+  
+dry<-ggplot(monthlyrain,aes(x=month,y=aveAnnRF,group=site))+
   geom_line(aes(color=site))+
   theme_bw()
 
@@ -129,7 +131,8 @@ dry
 
 monthlyrain%>%
   filter(month %in% c("Nov","Dec", "Jan", "Feb", "Mar","Apr"))
-  wet<-ggplot(monthlyrain,aes(x=month,y=aveAnnRF,group=site))+
+  
+wet<-ggplot(monthlyrain,aes(x=month,y=aveAnnRF,group=site))+
   geom_line(aes(color=site))+
   theme_bw()
 
