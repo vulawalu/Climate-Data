@@ -1,0 +1,199 @@
+---
+title: "Fiji meteorological data"
+output:
+  html_document:
+    code_folding: hide
+    fig_width: 12
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE,warning = FALSE)
+```
+
+## Bring in and format data {.tabset}
+
+Data are from the Fiji Meteorological Service. They also directed us to SST, air temp and sea level data through the [Australian government site](http://www.bom.gov.au/oceanography/projects/spslcmp/data/monthly.shtml)
+
+### Rainfall data
+
+```{r data}
+
+library(tidyverse)
+library(lubridate)
+library(readxl)
+
+
+## bring in all data
+lakebaRF<-readxl::read_excel("data/rainfall/Lakeba_Rainfall.xlsx",skip = 1,na=c(""," "))%>%
+  mutate(site="Lakeba")%>%
+  pivot_longer(cols=Jan:Dec,names_to = "month",values_to = "rainfall_mm")%>%
+  mutate(date=ym(paste(Year,month)))
+
+matukuRF<-readxl::read_excel("data/rainfall/Matuku_Rainfall.xlsx",skip = 1,na=c(""," "))%>%
+  mutate(site="Matuku")%>%
+  pivot_longer(cols=Jan:Dec,names_to = "month",values_to = "rainfall_mm")%>%
+  mutate(date=ym(paste(Year,month)))
+
+onoILauRF<-readxl::read_excel("data/rainfall/Ono-i-Lau_Rainfall.xlsx",skip = 1,na=c(""," "))%>%
+  mutate(site="Ono-i-Lau")%>%
+  pivot_longer(cols=Jan:Dec,names_to = "month",values_to = "rainfall_mm")%>%
+  mutate(date=ym(paste(Year,month)))
+
+vanuabalavuRF<-readxl::read_excel("data/rainfall/Vanuabalavu_Rainfall.xlsx",skip = 1,na=c(""," "))%>%
+  mutate(site="Vanuabalavu")%>%
+  pivot_longer(cols=Jan:Dec,names_to = "month",values_to = "rainfall_mm")%>%
+  mutate(date=ym(paste(Year,month)))
+
+
+## stack data together: rainfall
+fijiRF<-bind_rows(lakebaRF,matukuRF,onoILauRF,vanuabalavuRF)
+
+
+## calculate ave annual rainfall
+fijiRFsumm<-fijiRF%>%
+  group_by(Year,site)%>%
+  summarise(aveAnnRF=mean(rainfall_mm,na.rm=T))
+
+```
+
+#### Rainfall plots
+
+```{r absRF_plts, echo=FALSE}
+
+rfPlt<-ggplot(fijiRF,aes(x=date,y=rainfall_mm,group=site))+
+  geom_line(aes(color=site))+
+  theme_bw()
+
+rfPlt
+
+```
+
+```{r meanAnnRF}
+
+aveRfPlt<-ggplot(fijiRFsumm,aes(x=Year,y=aveAnnRF,group=site))+
+  geom_line(aes(color=site))+
+  theme_bw()
+
+aveRfPlt
+
+```
+#Plotting by month
+```{r}
+#plot of dry season
+fijiRF_dry<-fijiRF%>%
+  filter(month %in% c("May", "Jun","Jul", "Aug", "Sep", "Oct"))
+
+rfPlt_dry<-ggplot(fijiRF_dry,aes(x=date,y=rainfall_mm,group=site))+
+  geom_line(aes(color=site))+
+  theme_bw()
+
+rfPlt_dry
+
+
+#plot of wet season
+fijiRF_wet<-fijiRF%>%
+  filter(month %in% c("Nov", "Dec","Jan", "Feb", "Mar", "Apr")) 
+
+rfPlt_wet<-ggplot(fijiRF_wet,aes(x=date,y=rainfall_mm,group=site))+
+  geom_line(aes(color=site))+
+  theme_bw()
+
+rfPlt_wet ##Rainfall
+
+```
+#Attempt to plot average rainfall by dry/wet season months
+#I want to see if rain is higher at the beginning of the season or at the end.
+#Also if that changes as years go by 2000=2020?
+```{r}
+#Plot of mean rainfall in dry season
+#May-October
+  monthlyrain<-fijiRF%>%
+  group_by(month,site)%>% #group by year and site and calculate average annual rainfall or mean across years by site
+  summarise(aveAnnRF=mean(rainfall_mm,na.rm=T))
+
+monthlyrain%>%
+  filter(month %in% c("May", "Jun","Jul", "Aug", "Sep", "Oct"))
+  dry<-ggplot(monthlyrain,aes(x=month,y=aveAnnRF,group=site))+
+  geom_line(aes(color=site))+
+  theme_bw()
+
+dry
+    
+
+#Plotting for wet season
+#April-November
+
+ monthlyrain<-fijiRF%>%
+  group_by(month,site)%>% #group by year and site and calculate average annual rainfall or mean across years by site
+  summarise(aveAnnRF=mean(rainfall_mm,na.rm=T))
+
+monthlyrain%>%
+  filter(month %in% c("Nov","Dec", "Jan", "Feb", "Mar","Apr"))
+  wet<-ggplot(monthlyrain,aes(x=month,y=aveAnnRF,group=site))+
+  geom_line(aes(color=site))+
+  theme_bw()
+
+  wet
+
+```
+
+
+
+
+### Cyclone data
+
+Su pulled these data from a pdf from the Fiji Meteorological Service
+
+Winds data (from report):
+
+- Gale = winds between 63 - 87 km/hr (34 – 47 knots)
+- Storm = winds between 88 - 117 km/hr (48 – 63 knots)
+- Hurricane = winds greater than 117 km/hr (> 64 knots)
+
+```{r}
+
+cycl<-readxl::read_excel("data/cyclone/cycloneData.xlsx",na=c(""," "))%>%
+  mutate(winds=factor(`Initial winds warning`,levels=c("Gale","Storm","Hurricane"),ordered = T))
+
+## freq of winds by date
+cyclHist<-ggplot(cycl,aes(x=Date,groups=winds,fill=winds))+
+  geom_histogram(size=3)+
+  theme_bw()
+
+cyclHist
+
+##freq of winds by year
+cyclHist<-ggplot(cycl,aes(x=Year,groups=winds,fill=winds))+
+  geom_histogram(size=3)+
+  theme_bw()
+
+cyclHist
+
+cycl<-readxl::read_excel("data/cyclone/cycloneData.xlsx",na=c(""," "))%>%
+  mutate(winds=factor(`Initial winds warning`,levels=c("Gale","Storm","Hurricane"),ordered = T),
+         damage=factor(`Extent of Damage`,levels=c("Minor","Moderate","Severe"),ordered = T))
+
+## freq of damge by date
+
+cyclHist<-ggplot(cycl,aes(x=Date,groups=damage,fill=damage))+
+  geom_histogram(size=3)+
+  theme_bw()
+
+cyclHist
+
+```
+
+```{r}
+cyclMo<-cycl%>%
+  mutate(month=month(Date),
+         cyclMon=factor(month,levels=c(7,8,9,10,11,12,1,2,3,4,5,6),ordered = TRUE))
+ggplot(cyclMo)+
+  geom_rect(ymin=2,ymax=7,xmin=1969,xmax=2021,fill="grey80")+
+  # geom_rect(ymin=11,ymax=13,xmin=1969,xmax=2021)+
+  geom_point(aes(x=Year,y=cyclMon,color=damage))+
+  scale_y_discrete(breaks=c(7,8,9,10,11,12,1,2,3,4,5,6))+
+  scale_x_continuous(expand=c(0,0))+
+  theme_bw()
+
+```
+
